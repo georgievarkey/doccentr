@@ -62,3 +62,66 @@ graph TD
     L --> N[Send Email Notification]
     L --> O[Update Invoice Status]
 ```
+## 4.  MicroServices
+
+Here's a detailed breakdown of each service, its purpose, and main methods:
+
+### Auth Service
+
+**Purpose**: Handle user authentication and authorization.
+
+**Methods**:
+- `register(email, password)`: Register a new user.
+- `login(email, password)`: Authenticate a user and return a JWT token.
+- `verifyToken(token)`: Verify the validity of a JWT token.
+- `resetPassword(email)`: Initiate the password reset process.
+
+### Invoice Service
+
+**Purpose**: Manage invoice creation, retrieval, and updates.
+
+**Methods**:
+- `createInvoice(clientId, items, dueDate)`: Create a new invoice.
+- `getInvoice(invoiceId)`: Retrieve a specific invoice.
+- `listInvoices(filters)`: Retrieve a list of invoices based on filters.
+- `updateInvoiceStatus(invoiceId, status)`: Update the status of an invoice.
+- `deleteInvoice(invoiceId)`: Delete an invoice (soft delete).
+
+### Client Service
+
+**Purpose**: Manage client information.
+
+**Methods**:
+- `createClient(name, email, address, phone)`: Create a new client.
+- `getClient(clientId)`: Retrieve a specific client's information.
+- `listClients(filters)`: Retrieve a list of clients based on filters.
+- `updateClient(clientId, details)`: Update a client's information.
+- `deleteClient(clientId)`: Delete a client (soft delete).
+
+### Order Service
+
+**Purpose**: Manage order information.
+
+**Methods**:
+- `createOrder(clientId, items)`: Create a new order.
+- `getOrder(orderId)`: Retrieve a specific order.
+- `listOrders(filters)`: Retrieve a list of orders based on filters.
+- `updateOrderStatus(orderId, status)`: Update the status of an order.
+- `deleteOrder(orderId)`: Delete an order (soft delete).
+
+### PDF Service
+
+**Purpose**: Generate PDF invoices.
+
+**Methods**:
+- `generatePDF(invoiceId)`: Generate a PDF for a given invoice.
+- `getPDFUrl(invoiceId)`: Get the S3 URL for a generated PDF.
+
+### Notification Service
+
+**Purpose**: Send notifications to users and clients.
+
+**Methods**:
+- `sendInvoiceNotification(invoiceId, recipientEmail)`: Send an email notification about an invoice.
+- `sendReminder(invoiceId)`: Send a reminder for an unpaid invoice.
+- `sendStatusUpdate(invoiceId, status)`: Notify about an invoice status change.
