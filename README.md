@@ -125,3 +125,187 @@ Here's a detailed breakdown of each service, its purpose, and main methods:
 - `sendInvoiceNotification(invoiceId, recipientEmail)`: Send an email notification about an invoice.
 - `sendReminder(invoiceId)`: Send a reminder for an unpaid invoice.
 - `sendStatusUpdate(invoiceId, status)`: Notify about an invoice status change.
+
+## 5. Event-Driven Communication
+
+Services communicate through events published to Amazon EventBridge. Key events include:
+
+1. UserRegistered
+2. UserLoggedIn
+3. InvoiceCreated
+4. InvoiceUpdated
+5. PDFGenerated
+6. EmailSent
+
+## 6. Step Functions Workflow
+
+The invoice creation process is orchestrated using AWS Step Functions
+
+## 16. Data Flow
+
+The data flow in the Invoice Management System follows these general patterns:
+
+1. **User Authentication Flow**:
+   - User → API Gateway → Auth Service → Cognito → Auth Service → API Gateway → User
+
+2. **Invoice Creation Flow**:
+   - User → API Gateway → Step Functions → Invoice Service → EventBridge → PDF Service → S3 → EventBridge → Notification Service → User
+
+3. **Query Flow** (e.g., fetching invoices):
+   - User → API Gateway → Invoice Service → Database → Invoice Service → API Gateway → User
+
+Here's a diagram illustrating the main data flows:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API Gateway
+    participant Auth Service
+    participant Cognito
+    participant Step Functions
+    participant Invoice Service
+    participant EventBridge
+    participant PDF Service
+    participant S3
+    participant Notification Service
+    participant Database
+
+    User->>API Gateway: Authenticate
+    API Gateway->>Auth Service: Forward request
+    Auth Service->>Cognito: Validate credentials
+    Cognito-->>Auth Service: Token
+    Auth Service-->>API Gateway: Token
+    API Gateway-->>User: Token
+
+    User->>API Gateway: Create Invoice
+    API Gateway->>Step Functions: Start workflow
+    Step Functions->>Invoice Service: Create invoice
+    Invoice Service->>Database: Store invoice
+    Invoice Service->>EventBridge: Publish InvoiceCreated event
+    EventBridge->>PDF Service: Trigger PDF generation
+    PDF Service->>S3: Store PDF
+    PDF Service->>EventBridge: Publish PDFGenerated event
+    EventBridge->>Notification Service: Trigger notification
+    Notification Service->>User: Send email
+
+    User->>API Gateway: Query Invoices
+    API Gateway->>Invoice Service: Fetch invoices
+    Invoice Service->>Database: Query data
+    Database-->>Invoice Service: Return data
+    Invoice Service-->>API Gateway: Return invoices
+    API Gateway-->>User: Display invoices
+```
+
+## 17. Database Schemas
+
+Each service has its own database to ensure data isolation. Here are the main database schemas:
+
+### Auth Database
+```sql
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### Invoice Database
+```sql
+CREATE TABLE invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    client_id INT NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('draft', 'sent', 'paid', 'overdue') NOT NULL,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    pdf_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+);
+```
+
+### Client Database
+```sql
+CREATE TABLE clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    address TEXT,
+    phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### Order Database
+```sql
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    client_id INT NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'processing', 'completed', 'cancelled') NOT NULL,
+    order_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+```
+
+## 18. System Workflow
+
+The overall system workflow for creating an invoice is as follows:
+
+1. **User Authentication**:
+   - User logs in through the frontend application.
+   - Auth Service validates credentials with Cognito and returns a JWT token.
+
+2. **Invoice Creation**:
+   - User initiates invoice creation through the frontend.
+   - API Gateway receives the request and triggers the Step Functions workflow.
+   - Step Functions orchestrates the following steps:
+     a. Invoice Service creates the invoice record in the database.
+     b. PDF Service generates a PDF for the invoice and stores it in S3.
+     c. Notification Service sends an email to the client with the invoice details.
+
+3. **Event Publishing**:
+   - Each service publishes events to EventBridge upon completing significant actions.
+   - Other services can subscribe to these events for further processing or updates.
+
+4. **Query and Retrieval**:
+   - Users can query for invoices, clients, or orders through the API.
+   - Respective services retrieve the data from their databases and return it through API Gateway.
+
+5. **Status Updates**:
+   - Invoice statuses can be updated manually by users or automatically by the system (e.g., marking as overdue).
+   - Status updates trigger events for potential further actions (e.g., sending reminders).
+
+
+
+Each of these services is designed to be independent, focusing on its specific domain. They communicate with each other primarily through events published to EventBridge, maintaining loose coupling and allowing for easy scalability and modification of the system.
+
+The Step Functions workflow coordinates the complex process of invoice creation, ensuring that all steps are completed in the correct order and handling any potential failures or retries as needed.
+
+This architecture allows for a flexible, scalable, and maintainable system that can easily adapt to changing business requirements while providing robust invoice management capabilities.
