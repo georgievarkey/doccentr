@@ -15,8 +15,9 @@
 13. [Authentication and Authorization](#13-authentication-and-authorization)
 14. [Implementation Guide](#14-implementation-guide)
 15. [Testing](#15-testing)
-16. [Monitoring and Logging](#16-monitoring-and-logging)    
-17. [Conclusion](#17-conclusion)
+16. [Monitoring and Logging](#16-monitoring-and-logging)
+17. [API Specification](#17-api-specification)   
+18. [Conclusion](#18-conclusion)
 
 ## 1. Introduction
 
@@ -389,7 +390,471 @@ class InvoiceServiceTest extends TestCase
 5. **EventBridge Insights**: Use EventBridge Insights to monitor event patterns and detect anomalies.
 6. **Step Functions Monitoring**: Use AWS Step Functions console to monitor workflow executions.
 
-## 17. Conclusion
+## 17. API Specification
+```yaml
+openapi: 3.0.0
+info:
+  title: Invoice Management System API
+  description: API for managing invoices, clients, and orders in the Invoice Management System
+  version: 1.0.0
+servers:
+  - url: https://api.invoicemanagement.com/v1
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: User registered successfully
+        '400':
+          description: Invalid input
+
+  /auth/login:
+    post:
+      summary: Authenticate a user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Authentication failed
+
+  /invoices:
+    get:
+      summary: List all invoices
+      tags:
+        - Invoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, sent, paid, overdue]
+        - in: query
+          name: client_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:    
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+    post:
+      summary: Create a new invoice
+      tags:
+        - Invoices
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceInput'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  /invoices/{invoiceId}:
+    get:
+      summary: Get a specific invoice
+      tags:
+        - Invoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+    put:
+      summary: Update an invoice
+      tags:
+        - Invoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdate'
+      responses:
+        '200':
+          description: Invoice updated
+        '404':
+          description: Invoice not found
+
+  /clients:
+    get:
+      summary: List all clients
+      tags:
+        - Clients
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+    post:
+      summary: Create a new client
+      tags:
+        - Clients
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientInput'
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+
+  /clients/{clientId}:
+    get:
+      summary: Get a specific client
+      tags:
+        - Clients
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Client not found
+
+  /orders:
+    get:
+      summary: List all orders
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      summary: Create a new order
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+  /orders/{orderId}:
+    get:
+      summary: Get a specific order
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+
+components:
+  schemas:
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        invoice_number:
+          type: string
+        client_id:
+          type: integer
+        total_amount:
+          type: number
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue]
+        issue_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceItem'
+
+    InvoiceInput:
+      type: object
+      required:
+        - client_id
+        - items
+      properties:
+        client_id:
+          type: integer
+        issue_date:
+          type: string
+          format: date
+        due_date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceItemInput'
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue]
+        due_date:
+          type: string
+          format: date
+
+    InvoiceItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+        total_price:
+          type: number
+
+    InvoiceItemInput:
+      type: object
+      required:
+        - description
+        - quantity
+        - unit_price
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+
+    ClientInput:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        order_number:
+          type: string
+        client_id:
+          type: integer
+        total_amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, processing, completed, cancelled]
+        order_date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderInput:
+      type: object
+      required:
+        - client_id
+        - items
+      properties:
+        client_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_name:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+        total_price:
+          type: number
+
+    OrderItemInput:
+      type: object
+      required:
+        - product_name
+        - quantity
+        - unit_price
+      properties:
+        product_name:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+```
+
+## 18. Conclusion
 
 Each of the services is designed to be independent, focusing on its specific domain. They communicate with each other primarily through events published to EventBridge, maintaining loose coupling and allowing for easy scalability and modification of the system. The Step Functions workflow coordinates the complex process of invoice creation, ensuring that all steps are completed in the correct order and handling any potential failures or retries as needed.
 This architecture allows for a flexible, scalable, and maintainable system that can easily adapt to changing business requirements while providing robust invoice management capabilities.
