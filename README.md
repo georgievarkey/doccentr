@@ -6,19 +6,17 @@
 4. [Microservices](#4-microservices)
 5. [Event-Driven Communication](#5-event-driven-communication)
 6. [Step Functions Workflow](#6-step-functions-workflow)
-7. [Infrastructure as Code](#7-infrastructure-as-code)
-8. [Security Considerations](#8-security-considerations)
-9. [Advantages of the Architecture](#9-advantages-of-the-architecture)
-10. [Scaling Options](#10-scaling-options)
-11. [Authentication and Authorization](#11-authentication-and-authorization)
-12. [Implementation Guide](#12-implementation-guide)
-13. [Testing](#13-testing)
-14. [Monitoring and Logging](#14-monitoring-and-logging)
-16. [Data Flow](#16-data-flow)
-17. [Database Schemas](#17-database-schemas)
-18. [System Workflow](#18-system-workflow)
-19. [Service Breakdown](#19-service-breakdown)
-20. [Conclusion](#15-conclusion)
+7. [Data Flow](#16-data-flow)
+8. [Database Schemas](#17-database-schemas)
+9. [System Workflow](#18-system-workflow)
+10. [Security Considerations](#8-security-considerations)
+11. [Advantages of the Architecture](#9-advantages-of-the-architecture)
+12. [Scaling Options](#10-scaling-options)
+13. [Authentication and Authorization](#11-authentication-and-authorization)
+14. [Implementation Guide](#12-implementation-guide)
+15. [Testing](#13-testing)
+16. [Monitoring and Logging](#14-monitoring-and-logging)    
+17. [Conclusion](#15-conclusion)
 
 ## 1. Introduction
 
@@ -141,7 +139,7 @@ Services communicate through events published to Amazon EventBridge. Key events 
 
 The invoice creation process is orchestrated using AWS Step Functions
 
-## 16. Data Flow
+## 7. Data Flow
 
 The data flow in the Invoice Management System follows these general patterns:
 
@@ -196,7 +194,7 @@ sequenceDiagram
     API Gateway-->>User: Display invoices
 ```
 
-## 17. Database Schemas
+## 8. Database Schemas
 
 Each service has its own database to ensure data isolation. Here are the main database schemas:
 
@@ -274,7 +272,7 @@ CREATE TABLE order_items (
 );
 ```
 
-## 18. System Workflow
+## 9. System Workflow
 
 The overall system workflow for creating an invoice is as follows:
 
@@ -302,10 +300,97 @@ The overall system workflow for creating an invoice is as follows:
    - Invoice statuses can be updated manually by users or automatically by the system (e.g., marking as overdue).
    - Status updates trigger events for potential further actions (e.g., sending reminders).
 
+## 10. Security Considerations
 
+1. **Authentication**: Amazon Cognito handles user authentication securely.
+2. **Authorization**: API Gateway uses Cognito User Pool Authorizer to enforce access control.
+3. **Encryption**: Use AWS KMS for encrypting sensitive data at rest and in transit.
+4. **Secrets Management**: AWS Secrets Manager stores database credentials and other secrets.
+5. **Network Security**: VPC security groups and network ACLs control traffic between services.
+6. **HTTPS**: All API communications use HTTPS.
+7. **Least Privilege**: IAM roles for ECS tasks follow the principle of least privilege.
+8. **Event Security**: EventBridge uses resource-based policies to control which services can publish events.
 
-Each of these services is designed to be independent, focusing on its specific domain. They communicate with each other primarily through events published to EventBridge, maintaining loose coupling and allowing for easy scalability and modification of the system.
+## 11. Advantages of the Architecture
 
-The Step Functions workflow coordinates the complex process of invoice creation, ensuring that all steps are completed in the correct order and handling any potential failures or retries as needed.
+1. **Loose Coupling**: Services communicate via events, reducing direct dependencies.
+2. **Scalability**: Each service can scale independently based on demand.
+3. **Flexibility**: Easy to add new services or modify existing ones without impacting the entire system.
+4. **Resilience**: Temporary service unavailability doesn't break the system; events can be processed when the service recovers.
+5. **Workflow Management**: Step Functions provides robust handling of complex, multi-step processes.
+6. **Easier Maintenance**: Smaller, focused services are easier to understand and maintain.
+7. **Improved Fault Isolation**: Issues can be isolated to specific services.
+8. **Event-Driven**: Enables real-time processing and reactive system behavior.
 
+## 12. Scaling Options
+
+1. **ECS Auto Scaling**: Use ECS Service Auto Scaling to adjust the number of tasks based on CPU/memory utilization or custom metrics.
+2. **Database Scaling**: Utilize RDS read replicas for read-heavy workloads.
+3. **API Gateway Throttling**: Implement request throttling at the API Gateway level to protect backend services.
+4. **EventBridge Throughput**: Monitor and adjust EventBridge throughput as needed.
+5. **Step Functions Concurrent Executions**: Adjust the concurrent execution limit for Step Functions state machines as needed.
+
+## 13. Authentication and Authorization
+
+1. **User Registration and Login**: Handled by Cognito User Pools.
+2. **Token-based Authentication**: Cognito issues JWT tokens for authenticated users.
+3. **API Authorization**: API Gateway validates JWT tokens and enforces access control.
+4. **Fine-grained Access Control**: Implement custom authorizers in API Gateway for more granular control.
+
+## 14. Implementation Guide
+
+1. Set up AWS account and install AWS CDK.
+2. Clone the project repository.
+3. Update the `cdk.json` file with your AWS account details.
+4. Implement each microservice following the provided sample code.
+5. Build Docker images for each service and push to ECR.
+6. Deploy the CDK stack.
+7. Set up EventBridge rules for routing events between services.
+8. Implement event handlers in each service to process incoming events.
+9. Configure Step Functions for orchestrating workflows that span multiple services.
+10. Set up monitoring and alerting using CloudWatch.
+
+## 15. Testing
+
+Implement unit tests, integration tests, and end-to-end tests for each service. Use AWS SDK mocks for testing AWS service interactions. Example of a unit test for the Invoice Service:
+
+```php
+<?php
+use PHPUnit\Framework\TestCase;
+
+class InvoiceServiceTest extends TestCase
+{
+    private $invoiceService;
+    private $dbMock;
+    private $eventBridgeMock;
+
+    protected function setUp(): void
+    {
+        $this->dbMock = $this->createMock(PDO::class);
+        $this->eventBridgeMock = $this->createMock(Aws\EventBridge\EventBridgeClient::class);
+        $this->invoiceService = new InvoiceService($this->dbMock, $this->eventBridgeMock);
+    }
+
+    public function testCreateInvoice()
+    {
+        // Test implementation
+    }
+
+    // More test methods...
+}
+```
+
+## 16. Monitoring and Logging
+
+1. **CloudWatch Logs**: Each ECS service sends logs to CloudWatch Log Groups.
+2. **CloudWatch Metrics**: Monitor key metrics like CPU utilization, memory usage, and API Gateway request counts.
+3. **CloudWatch Alarms**: Set up alarms for critical thresholds (e.g., high error rates, low event processing rates).
+4. **X-Ray Tracing**: Implement distributed tracing to monitor and analyze service interactions.
+5. **EventBridge Insights**: Use EventBridge Insights to monitor event patterns and detect anomalies.
+6. **Step Functions Monitoring**: Use AWS Step Functions console to monitor workflow executions.
+
+## 17. Conclusion
+
+Each of the services is designed to be independent, focusing on its specific domain. They communicate with each other primarily through events published to EventBridge, maintaining loose coupling and allowing for easy scalability and modification of the system. The Step Functions workflow coordinates the complex process of invoice creation, ensuring that all steps are completed in the correct order and handling any potential failures or retries as needed.
 This architecture allows for a flexible, scalable, and maintainable system that can easily adapt to changing business requirements while providing robust invoice management capabilities.
+
