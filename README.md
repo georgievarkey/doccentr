@@ -398,7 +398,7 @@ info:
   description: API for managing invoices, clients, and orders in the Invoice Management System
   version: 1.0.0
 servers:
-  - url: https://api.invoicemanagement.com/v1
+  - url: https://api.doccentr.com/v1
 paths:
   /auth/register:
     post:
